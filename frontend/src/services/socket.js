@@ -8,13 +8,6 @@ let socket = null;
 export const getSocket = () => socket;
 
 export const initSocket = (token) => {
-  if (socket && socket.connected) {
-    return socket;
-  }
-  if (socket) {
-    socket.disconnect();
-    socket = null;
-  }
   socket = io({
     auth: {
       token

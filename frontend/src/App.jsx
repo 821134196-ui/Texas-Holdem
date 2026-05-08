@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { getProfile } from './store/authSlice';
-import { initSocket, disconnectSocket, getSocket } from './services/socket';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Lobby from './pages/Lobby';
@@ -27,11 +26,6 @@ const App = () => {
   useEffect(() => {
     if (isAuthenticated && token) {
       dispatch(getProfile());
-      if (!getSocket()) {
-        initSocket(token);
-      }
-    } else {
-      disconnectSocket();
     }
   }, [isAuthenticated, token, dispatch]);
   

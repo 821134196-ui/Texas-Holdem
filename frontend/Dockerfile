@@ -12,18 +12,9 @@ RUN npm run build
 
 FROM nginx:alpine
 
-RUN adduser -D -u 1001 nginxuser
-
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-RUN mkdir -p /var/cache/nginx /var/log/nginx /tmp && \
-    sed -i 's|^pid .*;|pid /tmp/nginx.pid;|' /etc/nginx/nginx.conf && \
-    chown -R nginxuser:0 /usr/share/nginx/html /var/cache/nginx /var/log/nginx /tmp /etc/nginx/conf.d && \
-    chmod -R g+w /usr/share/nginx/html /var/cache/nginx /var/log/nginx /tmp
-
-USER nginxuser
+COPY nginx.conf /etc/nginx/nginx.conf
 
 EXPOSE 8080
 
