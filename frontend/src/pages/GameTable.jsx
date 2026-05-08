@@ -90,28 +90,204 @@ const GameTable = () => {
   };
   
   const myPlayer = gameState?.players?.find(p => p.user_id === user?.id);
+  const isSpectator = gameState?.players && !gameState.players.some(p => p.user_id === user?.id);
   const isMyTurn = gameState?.your_turn;
-  
-  const getSeatPositions = (maxPlayers) => {
-    const positions = [];
-    const radiusX = 280;
-    const radiusY = 160;
-    const centerX = 340;
-    const centerY = 200;
-    
-    for (let i = 0; i < maxPlayers; i++) {
-      const angle = (Math.PI * 2 * i) / maxPlayers - Math.PI / 2;
-      positions.push({
-        x: centerX + radiusX * Math.cos(angle),
-        y: centerY + radiusY * Math.sin(angle),
-        seatIndex: i
-      });
-    }
-    
+
+  const MAX_PLAYERS = 9;
+  const TABLE_W = 700;
+  const TABLE_H = 500;
+  const CENTER_X = TABLE_W / 2;
+  const CENTER_Y = TABLE_H / 2;
+  const RADIUS_X = 280;
+  const RADIUS_Y_TOP = 130;
+  const RADIUS_Y_BOTTOM = 200;
+
+  const getSeatPositions = () => {
+    const players = gameState?.players || [];
+    const maxPlayers = Math.max(players.length, 2);
+    const mySeat = myPlayer ? myPlayer.seat_position : -1;
+
+    const positions = {};
+
+    players.forEach((player) => {
+      let localIndex;
+      if (isSpectator || mySeat === -1) {
+        localIndex = player.seat_position;
+      } else {
+        localIndex = (player.seat_position - mySeat + MAX_PLAYERS) % MAX_PLAYERS;
+      }
+
+      let angle;
+      if (isSpectator || mySeat === -1) {
+        angle = (Math.PI * 2 * localIndex) / maxPlayers - Math.PI / 2;
+      } else {
+        angle = (Math.PI * 2 * localIndex) / maxPlayers + Math.PI / 2;
+      }
+
+      const sinA = Math.sin(angle);
+      const radiusY = sinA >= 0 ? RADIUS_Y_BOTTOM : RADIUS_Y_TOP;
+
+      positions[player.seat_position] = {
+        x: CENTER_X + RADIUS_X * Math.cos(angle),
+        y: CENTER_Y + radiusY * sinA,
+        seatIndex: player.seat_position,
+        localIndex
+      };
+    });
+
     return positions;
   };
-  
-  const seatPositions = getSeatPositions(gameState?.players?.length || 9);
+
+  const seatPositions = getSeatPositions();
+
+  const renderSelfSeat = (player) => {
+    const isCurrentPlayer = player.is_turn;
+    const isDealer = gameState?.dealer_position === player.seat_position;
+    const isFolded = player.status === 'folded';
+    const isAllIn = player.status === 'all-in';
+
+    const getStatusText = () => {
+      if (player.status === 'waiting') return '等待中';
+      if (isFolded) return '弃牌';
+      if (isAllIn) return 'All-in';
+      if (player.last_action === 'fold') return '弃牌';
+      if (player.last_action === 'check') return '过牌';
+      if (player.last_action === 'call') return '跟注';
+      if (player.last_action === 'raise') return '加注';
+      if (player.last_action === 'all-in') return 'All-in';
+      if (player.last_action === 'small_blind') return '小盲';
+      if (player.last_action === 'big_blind') return '大盲';
+      return '';
+    };
+
+    return (
+      <div
+        key={player.user_id}
+        style={{
+          position: 'absolute',
+          bottom: '16px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: player.is_turn ? 20 : 15,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          background: 'rgba(0, 40, 30, 0.85)',
+          border: isCurrentPlayer ? '2px solid #ffd700' : '2px solid rgba(255,255,255,0.15)',
+          borderRadius: '12px',
+          padding: '8px 16px',
+          width: '280px',
+          boxShadow: isCurrentPlayer ? '0 0 20px rgba(255, 215, 0, 0.5)' : '0 4px 12px rgba(0,0,0,0.5)'
+        }}
+      >
+        {isDealer && (
+          <div style={{
+            position: 'absolute',
+            top: '-10px',
+            right: '-10px',
+            width: '24px',
+            height: '24px',
+            background: 'white',
+            color: '#000',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '10px',
+            fontWeight: 'bold',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+            zIndex: 10
+          }}>
+            D
+          </div>
+        )}
+
+        <div style={{
+          width: '50px',
+          height: '50px',
+          borderRadius: '50%',
+          background: 'linear-gradient(135deg, #007bff, #0056b3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '20px',
+          flexShrink: 0,
+          boxShadow: isCurrentPlayer ? '0 0 15px rgba(255, 215, 0, 0.8)' : '0 2px 8px rgba(0,0,0,0.5)',
+          border: isCurrentPlayer ? '3px solid #ffd700' : '2px solid rgba(255,255,255,0.3)',
+          transform: 'scale(1.15)'
+        }}>
+          {player.avatar || player.username.charAt(0).toUpperCase()}
+        </div>
+
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '2px',
+          minWidth: 0,
+          flex: '0 0 auto'
+        }}>
+          <div style={{
+            fontSize: '13px',
+            fontWeight: 'bold',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            maxWidth: '80px'
+          }}>
+            {player.username}
+          </div>
+          <div style={{
+            fontSize: '11px',
+            color: '#ffd700'
+          }}>
+            💰 {player.chips?.toLocaleString() || 0}
+          </div>
+          {getStatusText() && (
+            <div style={{
+              fontSize: '10px',
+              color: isFolded ? '#666' : isAllIn ? '#ff6b6b' : '#fff',
+              fontStyle: isFolded ? 'italic' : 'normal',
+              opacity: isFolded ? 0.6 : 1
+            }}>
+              {getStatusText()}
+            </div>
+          )}
+        </div>
+
+        {player.hole_cards && player.hole_cards.length > 0 && (
+          <div style={{
+            display: 'flex',
+            gap: '4px',
+            marginLeft: 'auto',
+            flexShrink: 0
+          }}>
+            {player.hole_cards.map((card, idx) => (
+              <div key={idx} style={{ transform: `rotate(${idx === 0 ? -3 : 3}deg)` }}>
+                <Card card={card} large />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {player.bet > 0 && (
+          <div style={{
+            position: 'absolute',
+            top: '-22px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            padding: '2px 10px',
+            background: 'rgba(255, 215, 0, 0.2)',
+            borderRadius: '10px',
+            fontSize: '11px',
+            color: '#ffd700',
+            whiteSpace: 'nowrap'
+          }}>
+            {player.bet?.toLocaleString() || 0}
+          </div>
+        )}
+      </div>
+    );
+  };
   
   return (
     <div style={{
@@ -196,8 +372,8 @@ const GameTable = () => {
         }}>
           <div style={{
             position: 'relative',
-            width: '700px',
-            height: '450px',
+            width: `${TABLE_W}px`,
+            height: `${TABLE_H}px`,
             margin: '0 auto'
           }}>
             <div style={{
@@ -214,7 +390,7 @@ const GameTable = () => {
             }}>
               <div style={{
                 position: 'absolute',
-                top: '50%',
+                top: '38%',
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
                 display: 'flex',
@@ -248,14 +424,16 @@ const GameTable = () => {
               </div>
             </div>
             
-            {gameState?.players?.map((player) => {
+            {!isSpectator && myPlayer && renderSelfSeat(myPlayer)}
+
+            {gameState?.players?.filter(p => p.user_id !== user?.id || isSpectator).map((player) => {
               const pos = seatPositions[player.seat_position];
               if (!pos) return null;
-              
+
               const isCurrentPlayer = player.is_turn;
-              const isMyTurn = player.user_id === user?.id && player.is_turn;
+              const isPlayerMyTurn = player.user_id === user?.id && player.is_turn;
               const isMyself = player.user_id === user?.id;
-              
+
               return (
                 <div
                   key={player.user_id}
@@ -271,7 +449,7 @@ const GameTable = () => {
                     player={player}
                     isCurrentPlayer={isCurrentPlayer}
                     isDealer={gameState?.dealer_position === player.seat_position}
-                    isMyTurn={isMyTurn}
+                    isMyTurn={isPlayerMyTurn}
                     isMyself={isMyself}
                   />
                 </div>
