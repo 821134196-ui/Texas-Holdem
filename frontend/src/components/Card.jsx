@@ -7,14 +7,29 @@ const SUIT_COLORS = {
   '♦': '#dc3545'
 };
 
-const Card = ({ card, faceDown = false, small = false, animate = false }) => {
+const Card = ({ card, faceDown = false, small = false, large = false, animate = false }) => {
+  const getSize = () => {
+    if (small) return { width: '30px', height: '40px', borderRadius: '3px', borderSmall: true };
+    if (large) return { width: '80px', height: '112px', borderRadius: '8px', borderSmall: false };
+    return { width: '60px', height: '84px', borderRadius: '6px', borderSmall: false };
+  };
+  
+  const getFontSize = () => {
+    if (small) return { value: '10px', suit: '8px', center: '16px' };
+    if (large) return { value: '18px', suit: '14px', center: '32px' };
+    return { value: '14px', suit: '10px', center: '24px' };
+  };
+  
+  const size = getSize();
+  const fontSize = getFontSize();
+  
   if (!card) {
     return (
       <div style={{
-        width: small ? '30px' : '60px',
-        height: small ? '40px' : '84px',
+        width: size.width,
+        height: size.height,
         background: 'rgba(0, 0, 0, 0.3)',
-        borderRadius: small ? '3px' : '6px',
+        borderRadius: size.borderRadius,
         border: '1px dashed rgba(255, 255, 255, 0.2)'
       }} />
     );
@@ -23,10 +38,10 @@ const Card = ({ card, faceDown = false, small = false, animate = false }) => {
   if (faceDown) {
     return (
       <div style={{
-        width: small ? '30px' : '60px',
-        height: small ? '40px' : '84px',
+        width: size.width,
+        height: size.height,
         background: 'linear-gradient(135deg, #1a1a2e, #16213e)',
-        borderRadius: small ? '3px' : '6px',
+        borderRadius: size.borderRadius,
         border: '2px solid #444',
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
         display: 'flex',
@@ -49,43 +64,43 @@ const Card = ({ card, faceDown = false, small = false, animate = false }) => {
   
   return (
     <div style={{
-      width: small ? '30px' : '60px',
-      height: small ? '40px' : '84px',
+      width: size.width,
+      height: size.height,
       background: '#fff',
-      borderRadius: small ? '3px' : '6px',
-      border: small ? '1px solid #ddd' : '2px solid #ccc',
+      borderRadius: size.borderRadius,
+      border: size.borderSmall ? '1px solid #ddd' : '2px solid #ccc',
       boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'space-between',
-      padding: small ? '2px' : '4px',
+      padding: small ? '2px' : (large ? '6px' : '4px'),
       color: isRed ? '#dc3545' : '#000',
       fontFamily: 'Arial, sans-serif',
       transition: animate ? 'transform 0.3s ease' : 'none'
     }}>
       <div style={{
-        fontSize: small ? '10px' : '14px',
+        fontSize: fontSize.value,
         fontWeight: 'bold',
         lineHeight: 1
       }}>
         {card.value}
-        <div style={{ fontSize: small ? '8px' : '10px' }}>{card.suit}</div>
+        <div style={{ fontSize: fontSize.suit }}>{card.suit}</div>
       </div>
       <div style={{
-        fontSize: small ? '16px' : '24px',
+        fontSize: fontSize.center,
         textAlign: 'center'
       }}>
         {card.suit}
       </div>
       <div style={{
-        fontSize: small ? '10px' : '14px',
+        fontSize: fontSize.value,
         fontWeight: 'bold',
         lineHeight: 1,
         transform: 'rotate(180deg)',
         alignSelf: 'flex-end'
       }}>
         {card.value}
-        <div style={{ fontSize: small ? '8px' : '10px' }}>{card.suit}</div>
+        <div style={{ fontSize: fontSize.suit }}>{card.suit}</div>
       </div>
     </div>
   );

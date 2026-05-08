@@ -91,27 +91,57 @@ const GameTable = () => {
   
   const myPlayer = gameState?.players?.find(p => p.user_id === user?.id);
   const isMyTurn = gameState?.your_turn;
+  const isSpectator = !myPlayer && gameState?.players?.length > 0;
   
-  const getSeatPositions = (maxPlayers) => {
+  const getSeatPositions = (players, mySeatPosition, isSpectatorMode) => {
     const positions = [];
     const radiusX = 280;
-    const radiusY = 160;
     const centerX = 340;
     const centerY = 200;
+    const maxPlayers = 9;
     
+    if (isSpectatorMode) {
+      const radiusY = 160;
+      for (let i = 0; i < maxPlayers; i++) {
+        const angle = (Math.PI * 2 * i) / maxPlayers - Math.PI / 2;
+        positions.push({
+          x: centerX + radiusX * Math.cos(angle),
+          y: centerY + radiusY * Math.sin(angle),
+          seatIndex: i,
+          localIndex: i,
+          isSelfSeat: false,
+          avatarScale: 1
+        });
+      }
+      return positions;
+    }
+    
+    const mySeat = mySeatPosition ?? 0;
     for (let i = 0; i < maxPlayers; i++) {
-      const angle = (Math.PI * 2 * i) / maxPlayers - Math.PI / 2;
+      const localIndex = ((i - mySeat + maxPlayers) % maxPlayers);
+      const rawAngle = Math.PI / 2 - (Math.PI * 2 * localIndex) / maxPlayers;
+      const angle = ((rawAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+      
+      const radiusY = (Math.sin(angle) >= 0) ? 200 : 130;
+      
       positions.push({
         x: centerX + radiusX * Math.cos(angle),
         y: centerY + radiusY * Math.sin(angle),
-        seatIndex: i
+        seatIndex: i,
+        localIndex: localIndex,
+        isSelfSeat: localIndex === 0,
+        avatarScale: localIndex === 0 ? 1.15 : 1
       });
     }
     
     return positions;
   };
   
-  const seatPositions = getSeatPositions(gameState?.players?.length || 9);
+  const seatPositions = getSeatPositions(
+    gameState?.players,
+    myPlayer?.seat_position,
+    isSpectator
+  );
   
   return (
     <div style={{
@@ -214,7 +244,7 @@ const GameTable = () => {
             }}>
               <div style={{
                 position: 'absolute',
-                top: '50%',
+                top: '38%',
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
                 display: 'flex',
@@ -262,9 +292,9 @@ const GameTable = () => {
                   style={{
                     position: 'absolute',
                     left: `${pos.x}px`,
-                    top: `${pos.y}px`,
+                    top: pos.isSelfSeat ? `${pos.y + 16}px` : `${pos.y}px`,
                     transform: 'translate(-50%, -50%)',
-                    zIndex: player.is_turn ? 20 : 10
+                    zIndex: player.is_turn ? 20 : (pos.isSelfSeat ? 25 : 10)
                   }}
                 >
                   <PlayerSeat
@@ -273,6 +303,8 @@ const GameTable = () => {
                     isDealer={gameState?.dealer_position === player.seat_position}
                     isMyTurn={isMyTurn}
                     isMyself={isMyself}
+                    isSelfSeat={pos.isSelfSeat}
+                    avatarScale={pos.avatarScale}
                   />
                 </div>
               );
