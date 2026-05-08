@@ -1,0 +1,97 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: poker_db
+    environment:
+      POSTGRES_USER: poker
+      POSTGRES_PASSWORD: poker123
+      POSTGRES_DB: poker
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U poker"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - poker_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: poker_redis
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - poker_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: poker_backend
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=poker
+      - DB_PASSWORD=poker123
+      - DB_NAME=poker
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET:-your-production-jwt-secret-key-change-me}
+      - JWT_EXPIRES_IN=7d
+      - INITIAL_CHIPS=10000
+      - ACTION_TIMEOUT=30
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src
+    networks:
+      - poker_network
+    restart: unless-stopped
+    init: true
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: poker_frontend
+    ports:
+      - "80:8080"
+    depends_on:
+      - backend
+    networks:
+      - poker_network
+    restart: unless-stopped
+    init: true
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  poker_network:
+    driver: bridge
